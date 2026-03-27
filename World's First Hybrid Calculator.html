@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Scientific Calculator</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.0.0/math.min.js"></script>
+    
+    <style>
+        /* --- CSS STYLES START --- */
+        :root {
+            --bg-color-light: #f4f7f6;
+            --text-color-light: #333;
+            --calculator-bg-light: #fff;
+            --button-bg-light: #e0e0e0;
+            --button-hover-light: #d0d0d0;
+            --operator-bg-light: #f79256;
+            --operator-hover-light: #e6804a;
+            --equals-bg-light: #4CAF50;
+            --equals-hover-light: #45a049;
+            --display-bg-light: #eee;
+            --border-color-light: #ccc;
+            --history-color-light: #888;
+        }
+
+        [data-theme="dark"] {
+            --bg-color-dark: #222;
+            --text-color-dark: #f4f7f6;
+            --calculator-bg-dark: #333;
+            --button-bg-dark: #555;
+            --button-hover-dark: #666;
+            --operator-bg-dark: #f79256; /* Keep operators visible */
+            --operator-hover-dark: #e6804a;
+            --equals-bg-dark: #4CAF50;
+            --equals-hover-dark: #45a049;
+            --display-bg-dark: #444;
+            --border-color-dark: #555;
+            --history-color-dark: #aaa;
+
+            background-color: var(--bg-color-dark);
+            color: var(--text-color-dark);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column; /* Changed to column to stack calculator and history */
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: var(--bg-color-light);
+            color: var(--text-color-light);
+            transition: background-color 0.3s, color 0.3s;
+            gap: 20px; /* Space between calculator and history */
+        }
+
+        .calculator-container {
+            background-color: var(--calculator-bg-light);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 1000px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            position: relative; /* For theme toggle positioning */
+            transition: background-color 0.3s;
+        }
+
+        [data-theme="dark"] .calculator-container {
+            background-color: var(--calculator-bg-dark);
+        }
+
+        .theme-toggle-container {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+        }
+
+        .theme-toggle-button {
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            color: var(--text-color-light);
+            transition: color 0.3s;
+        }
+
+        [data-theme="dark"] .theme-toggle-button {
+            color: var(--text-color-dark);
+        }
+
+        .display {
+            background-color: var(--display-bg-light);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: right;
+            word-wrap: break-word;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s;
+        }
+
+        [data-theme="dark"] .display {
+            background-color: var(--display-bg-dark);
+        }
+
+        .history-display-main { /* Renamed to avoid conflict with new history section */
+            font-size: 2em;
+            font-weight: bold;
+            color: var(--history-color-light);
+            transition: color 0.3s;
+        }
+
+        [data-theme="dark"] .history-display-main {
+            color: var(--history-color-dark);
+        }
+
+        .expression {
+            font-size: 3.4em;
+            font-weight: bold;
+            color: var(--text-color-light);
+            transition: color 0.3s;
+        }
+
+        [data-theme="dark"] .expression {
+            color: var(--text-color-dark);
+        }
+
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* Adjusted for new buttons */
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .control-button {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            background-color: var(--button-bg-light);
+            color: var(--text-color-light);
+            transition: background-color 0.2s, color 0.2s, transform 0.1s;
+        }
+
+        [data-theme="dark"] .control-button {
+            background-color: var(--button-bg-dark);
+            color: var(--text-color-dark);
+        }
+
+        .control-button:hover {
+            background-color: var(--button-hover-light);
+            transform: translateY(-2px);
+        }
+
+        [data-theme="dark"] .control-button:hover {
+            background-color: var(--button-hover-dark);
+        }
+
+        .voice-button {
+            background-color: #007bff; /* Blue for voice */
+            color: white;
+        }
+        .voice-button.active {
+            background-color: #28a745; /* Green when active */
+        }
+
+        .mute-button {
+            background-color: #6c757d; /* Grey for mute */
+            color: white;
+        }
+
+        .history-button {
+            background-color: #17a2b8; /* Info blue for history */
+            color: white;
+        }
+
+        .new-task-button {
+            background-color: #28a745; /* Green for new task */
+            color: white;
+        }
+
+        .search-history-button {
+            background-color: #ffc107; /* Yellow for search */
+            color: #333;
+        }
+
+        .lang-select, .task-select {
+            -webkit-appearance: none; /* Remove default arrow */
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg fill="%23333" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); /* Custom arrow */
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 24px;
+            padding-right: 30px; /* Make space for the arrow */
+        }
+        [data-theme="dark"] .lang-select, [data-theme="dark"] .task-select {
+            background-image: url('data:image/svg+xml;utf8,<svg fill="%23f4f7f6" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+        }
+        .task-select {
+            background-color: #6c757d; /* Grey for task select */
+            color: white;
+        }
+
+
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .button {
+            padding: 20px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2em;
+            cursor: pointer;
+            background-color: var(--button-bg-light);
+            color: var(--text-color-light);
+            transition: background-color 0.2s, color 0.2s, transform 0.1s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] .button {
+            background-color: var(--button-bg-dark);
+            color: var(--text-color-dark);
+        }
+
+        .button:hover {
+            background-color: var(--button-hover-light);
+            transform: translateY(-2px);
+        }
+
+        [data-theme="dark"] .button:hover {
+            background-color: var(--button-hover-dark);
+        }
+
+        .button:active {
+            transform: translateY(0);
+            box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2); /* Adjusted for more subtle active state */
+        }
+
+        .button.operator {
+            background-color: var(--operator-bg-light);
+            color: white;
+        }
+
+        [data-theme="dark"] .button.operator {
+            background-color: var(--operator-bg-dark);
+        }
+
+        .button.operator:hover {
+            background-color: var(--operator-hover-light);
+        }
+
+        [data-theme="dark"] .button.operator:hover {
+            background-color: var(--operator-hover-dark);
+        }
+
+        .button.equals {
+            grid-column: span 4; /* Makes the equals button span across all 4 columns */
+            background-color: var(--equals-bg-light);
+            color: white;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        [data-theme="dark"] .button.equals {
+            background-color: var(--equals-bg-dark);
+        }
+
+        .button.equals:hover {
+            background-color: var(--equals-hover-light);
+        }
+
+        [data-theme="dark"] .button.equals:hover {
+            background-color: var(--equals-hover-dark);
+        }
+
+        .button.function {
+            background-color: #c9c9c9;
+            color: #333;
+        }
+        [data-theme="dark"] .button.function {
+            background-color: #666;
+            color: #f4f7f6;
+        }
+
+        /* --- New History Section Styles --- */
+        .day-wise-history {
+            background-color: var(--calculator-bg-light);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            width: 1000px;
+            overflow-y: auto;
+            transition: background-color 0.3s;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            border: 1px solid var(--border-color-light);
+        }
+
+        [data-theme="dark"] .day-wise-history {
+            background-color: var(--calculator-bg-dark);
+            border: 1px solid var(--border-color-dark);
+        }
+
+        .day-wise-history h3 {
+            margin-top: 0;
+            color: var(--text-color-light);
+            border-bottom: 1px solid var(--border-color-light);
+            padding-bottom: 10px;
+            transition: color 0.3s, border-color 0.3s;
+        }
+
+        [data-theme="dark"] .day-wise-history h3 {
+            color: var(--text-color-dark);
+            border-color: var(--border-color-dark);
+        }
+
+        .day-entry {
+            border: 1px solid var(--border-color-light);
+            border-radius: 8px;
+            padding: 10px;
+            background-color: var(--display-bg-light);
+            transition: background-color 0.3s, border-color 0.3s;
+            cursor: pointer; /* Indicate clickable */
+        }
+        [data-theme="dark"] .day-entry {
+            background-color: var(--display-bg-dark);
+            border-color: var(--border-color-dark);
+        }
+        .day-entry:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .day-header, .task-header {
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 5px;
+            color: var(--text-color-light);
+            transition: color 0.3s;
+        }
+        [data-theme="dark"] .day-header, [data-theme="dark"] .task-header {
+            color: var(--text-color-dark);
+        }
+
+        .toggle-icon {
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+
+        .day-content, .task-content {
+            margin-top: 5px;
+            border-top: 1px dashed var(--border-color-light);
+            padding-top: 5px;
+            font-size: 0.9em;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, border-top 0.3s;
+        }
+        [data-theme="dark"] .day-content, [data-theme="dark"] .task-content {
+            border-color: var(--border-color-dark);
+        }
+
+        .day-entry.expanded .day-content, .task-entry.expanded .task-content {
+            width: 1000px;
+            max-height: 1000000px; /* Limit height and make scrollable */
+            overflow-y: auto;
+            transition: max-height 0.3s ease-in;
+        }
+        
+        .history-item {
+            padding: 3px 0;
+            color: var(--text-color-light);
+            transition: color 0.3s;
+        }
+        [data-theme="dark"] .history-item {
+            color: var(--text-color-dark);
+        }
+
+        .clear-history-button {
+            background-color: #dc3545; /* Red for destructive action */
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            width: 100%; /* Make it full width in its container */
+            margin-top: 10px; /* Space from history entries */
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .clear-history-button:hover {
+            background-color: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .task-entry {
+            margin-top: 10px;
+            padding-left: 10px;
+            border-left: 3px solid #ff9800; /* Orange border for tasks */
+            border-radius: 0 0 0 5px;
+        }
+        [data-theme="dark"] .task-entry {
+            border-left-color: #e6804a;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+            justify-content: center;
+        }
+        .search-container input[type="text"] {
+            flex-grow: 1;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color-light);
+            background-color: var(--display-bg-light);
+            color: var(--text-color-light);
+            transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+        }
+        [data-theme="dark"] .search-container input[type="text"] {
+            border-color: var(--border-color-dark);
+            background-color: var(--display-bg-dark);
+            color: var(--text-color-dark);
+        }
+        .search-container button {
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        .search-container button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 400px) {
+            .calculator-container, .day-wise-history {
+                width: 95%;
+                padding: 15px;
+            }
+
+            .display {
+                min-height: 90px;
+                font-size: 1.8em;
+                padding: 10px;
+            }
+
+            .expression {
+                font-size: 1.8em;
+            }
+
+            .button {
+                padding: 15px 0;
+                font-size: 1.1em;
+            }
+
+            .controls {
+                grid-template-columns: 1fr; /* Stack controls vertically on small screens */
+            }
+        }
+        /* --- CSS STYLES END --- */
+    </style>
+</head>
+<body>
+    <div class="calculator-container">
+        <div class="theme-toggle-container">
+            <button id="theme-toggle" class="theme-toggle-button">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+
+        <div class="display">
+            <div id="history-display-main" class="history-display-main"></div>
+            <div id="expression" class="expression">0</div>
+        </div>
+
+        <div class="controls">
+            <button id="voiceInputToggle" class="control-button voice-button"><i class="fas fa-microphone"></i> Speak</button>
+            <select id="languageSelect" class="control-button lang-select">
+                <option value="en-IN">English</option>
+                <option value="hi-IN">हिन्दी</option>
+            </select>
+            <button id="muteVoiceOutput" class="control-button mute-button"><i class="fas fa-volume-up"></i> Mute</button>
+            <button id="historyButton" class="control-button history-button"><i class="fas fa-history"></i> Today's History</button>
+            
+            <button id="newTaskButton" class="control-button new-task-button"><i class="fas fa-tasks"></i> New Task</button>
+            <select id="taskSelect" class="control-button task-select">
+                </select>
+
+            <button id="searchHistoryButton" class="control-button search-history-button"><i class="fas fa-search"></i> Search History</button>
+        </div>
+        
+        <div id="searchControls" class="search-container" style="display: none;">
+            <input type="text" id="searchInput" placeholder="Search by date (YYYY-MM-DD) or task name">
+            <button id="executeSearchButton"><i class="fas fa-arrow-right"></i> Go</button>
+        </div>
+
+
+        <div class="keypad">
+<button class="button equals" data-value="=">=</button>
+            <button class="button function" data-value="AC">AC</button>
+            <button class="button function" data-value="DEL">DEL</button>
+            <button class="button function" data-value="%">%</button>
+            <button class="button operator" data-value="/">÷</button>
+
+            <button class="button function" data-value="sin(">sin</button>
+            <button class="button function" data-value="cos(">cos</button>
+            <button class="button function" data-value="tan(">tan</button>
+            <button class="button operator" data-value="*">x</button>
+
+            <button class="button function" data-value="log(">log</button>
+            <button class="button function" data-value="log10(">log base 10</button>
+            <button class="button function" data-value="sqrt(">√</button>
+            <button class="button operator" data-value="+">+</button>
+
+            <button class="button number" data-value="7">7</button>
+            <button class="button number" data-value="8">8</button>
+            <button class="button number" data-value="9">9</button>
+            <button class="button operator" data-value="-">-</button>
+
+            <button class="button number" data-value="4">4</button>
+            <button class="button number" data-value="5">5</button>
+            <button class="button number" data-value="6">6</button>
+            <button class="button function" data-value="^">x^y</button>
+
+            <button class="button number" data-value="1">1</button>
+            <button class="button number" data-value="2">2</button>
+            <button class="button number" data-value="3">3</button>
+            <button class="button function" data-value="(">(</button>
+
+            <button class="button number" data-value="0">0</button>
+            <button class="button number" data-value=".">.</button>
+            <button class="button function" data-value="pi">π</button>
+            <button class="button function" data-value=")">)</button>
+        </div>
+    </div>
+
+    <div id="dayWiseHistory" class="day-wise-history">
+        <h3>Day-Wise History</h3>
+        <p id="noHistoryMessage">No history available yet.</p>
+        <button id="clearAllHistoryButton" class="clear-history-button"><i class="fas fa-trash-alt"></i> Clear All History</button>
+    </div>
+
+    <script>
+        /* --- JAVASCRIPT START --- */
+        document.addEventListener('DOMContentLoaded', () => {
+            const expressionDisplay = document.getElementById('expression');
+            const historyDisplayMain = document.getElementById('history-display-main');
+            const buttons = document.querySelectorAll('.button');
+            const voiceInputToggle = document.getElementById('voiceInputToggle');
+            const languageSelect = document.getElementById('languageSelect');
+            const muteVoiceOutput = document.getElementById('muteVoiceOutput');
+            const historyButton = document.getElementById('historyButton');
+            const newTaskButton = document.getElementById('newTaskButton');
+            const searchHistoryButton = document.getElementById('searchHistoryButton');
+            const searchControls = document.getElementById('searchControls');
+            const searchInput = document.getElementById('searchInput');
+            const executeSearchButton = document.getElementById('executeSearchButton');
+            const clearAllHistoryButton = document.getElementById('clearAllHistoryButton');
+            const themeToggle = document.getElementById('theme-toggle');
+            const dayWiseHistoryContainer = document.getElementById('dayWiseHistory');
+            const noHistoryMessage = document.getElementById('noHistoryMessage');
+            const taskSelect = document.getElementById('taskSelect'); // New task select dropdown
+
+            let calculationHistory = {}; 
+            let currentExpression = '';
+            let currentDayHistory = []; // History for the current active task (used by "Today's History" button)
+            let historyIndex = -1; 
+            let isVoiceInputActive = false;
+            let isMuted = false;
+            let recognition;
+            let synth = window.speechSynthesis;
+            let selectedLanguage = 'en-IN'; 
+
+            // Initialize activeTask to default or from localStorage.
+            // This is just the initial state; setActiveTask handles persistence.
+            let activeTask = localStorage.getItem('activeTask') || 'General Calculations'; 
+
+
+            // --- Helper Functions ---
+            function getTodayDate() {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            const TODAY_DATE = getTodayDate();
+
+            // --- Task Management ---
+            function setActiveTask(taskName) {
+                if (taskName) { // Ensure taskName is not null or empty
+                    activeTask = taskName;
+                    localStorage.setItem('activeTask', activeTask); // Persist the active task
+                    historyDisplayMain.textContent = `Active Task: ${activeTask}`;
+                    speak(`Task set to ${taskName}`);
+                    
+                    // Crucial: Ensure the structure exists before interaction
+                    if (!calculationHistory[TODAY_DATE]) {
+                        calculationHistory[TODAY_DATE] = {};
+                    }
+                    if (!calculationHistory[TODAY_DATE][activeTask]) {
+                        calculationHistory[TODAY_DATE][activeTask] = [];
+                    }
+
+                    historyIndex = -1; // Reset history index when a new task is activated
+                    updateCurrentDayHistoryForDisplay(); // Update the array for the main display's history button
+                    populateTaskSelect(); // Re-populate to show the newly active/created task
+                    saveHistory(); // Save immediately after setting a new task
+                }
+            }
+
+            function updateCurrentDayHistoryForDisplay() {
+                // This updates `currentDayHistory` which is used by the "Today's History" button.
+                // It should reflect the history of the currently active task for today.
+                currentDayHistory = calculationHistory[TODAY_DATE]?.[activeTask] || [];
+            }
+
+            function populateTaskSelect() {
+                taskSelect.innerHTML = ''; // Clear existing options
+
+                // Add default options
+                const generalOption = document.createElement('option');
+                generalOption.value = 'General Calculations';
+                generalOption.textContent = 'General Calculations';
+                taskSelect.appendChild(generalOption);
+
+                const allTaskNames = new Set();
+                // Gather all unique task names from history across all dates
+                for (const date in calculationHistory) {
+                    for (const taskName in calculationHistory[date]) {
+                        allTaskNames.add(taskName);
+                    }
+                }
+
+                // Add other historical task names
+                const sortedTaskNames = Array.from(allTaskNames).sort();
+                sortedTaskNames.forEach(taskName => {
+                    if (taskName !== 'General Calculations') { // Avoid adding General Calculations twice
+                        const option = document.createElement('option');
+                        option.value = taskName;
+                        option.textContent = taskName;
+                        taskSelect.appendChild(option);
+                    }
+                });
+
+                // Set the dropdown to the currently active task
+                taskSelect.value = activeTask;
+                // If the activeTask isn't in the options (e.g., history for it was cleared), default to General
+                if (!taskSelect.value) { // This means activeTask wasn't found in the options
+                    taskSelect.value = 'General Calculations';
+                    activeTask = 'General Calculations';
+                    localStorage.setItem('activeTask', activeTask);
+                    historyDisplayMain.textContent = `Active Task: ${activeTask}`;
+                }
+            }
+
+            taskSelect.addEventListener('change', (event) => {
+                const selectedValue = event.target.value;
+                setActiveTask(selectedValue); // Directly set the active task to the selected value
+            });
+
+            // --- Local Storage Management ---
+            function loadHistory() {
+                try {
+                    const storedHistory = localStorage.getItem('calculationHistory');
+                    if (storedHistory) {
+                        calculationHistory = JSON.parse(storedHistory);
+                    } else {
+                        calculationHistory = {};
+                    }
+                } catch (e) {
+                    console.error("Failed to load history from local storage:", e);
+                    calculationHistory = {}; // Reset to empty if corrupted
+                }
+                // Ensure active task is set AFTER history is loaded to populate taskSelect correctly
+                // and before any history rendering.
+                const storedActiveTask = localStorage.getItem('activeTask');
+                if (storedActiveTask) {
+                    activeTask = storedActiveTask;
+                } else {
+                    activeTask = 'General Calculations'; // Default if none saved
+                    localStorage.setItem('activeTask', activeTask);
+                }
+                historyDisplayMain.textContent = `Active Task: ${activeTask}`;
+                populateTaskSelect(); // Populate dropdown based on loaded history and active task
+                updateCurrentDayHistoryForDisplay(); // Populate currentDayHistory based on active task
+                renderDayWiseHistory(); // CRUCIAL: Render history after loading
+            }
+
+            function saveHistory() {
+                try {
+                    // Ensure today's date and active task objects exist before saving
+                    if (!calculationHistory[TODAY_DATE]) {
+                        calculationHistory[TODAY_DATE] = {};
+                    }
+                    if (!calculationHistory[TODAY_DATE][activeTask]) {
+                        calculationHistory[TODAY_DATE][activeTask] = [];
+                    }
+                    localStorage.setItem('calculationHistory', JSON.stringify(calculationHistory));
+                } catch (e) {
+                    console.error("Failed to save history to local storage:", e);
+                }
+                // populateTaskSelect(); // No need to re-populate on every save, only on task change or load
+                renderDayWiseHistory(); // Re-render history after saving
+            }
+
+            function clearAllHistory() {
+                if (confirm("Are you sure you want to clear ALL calculation history? This cannot be undone.")) {
+                    localStorage.removeItem('calculationHistory');
+                    localStorage.removeItem('activeTask'); // Also clear the active task
+                    calculationHistory = {};
+                    currentExpression = '';
+                    historyIndex = -1;
+                    setActiveTask('General Calculations'); // Reset active task to default, which will trigger re-rendering
+                    expressionDisplay.textContent = '0';
+                    // historyDisplayMain is updated by setActiveTask
+                    speak('All calculation history has been cleared.');
+                }
+            }
+
+            // --- Render Day-Wise History Section ---
+            function renderDayWiseHistory(filteredHistory = null) {
+                const historyToRender = filteredHistory || calculationHistory;
+                const historyContentDiv = dayWiseHistoryContainer;
+                
+                // Clear existing dynamic history entries (excluding the h3, p, and button)
+                const existingDayEntries = historyContentDiv.querySelectorAll('.day-entry');
+                existingDayEntries.forEach(entry => entry.remove());
+                
+                // Reset message visibility
+                noHistoryMessage.style.display = 'block'; 
+
+                const sortedDates = Object.keys(historyToRender).sort((a, b) => new Date(b) - new Date(a)); // Newest first
+
+                let hasRenderableHistory = false;
+                sortedDates.forEach(date => {
+                    const dayTasks = historyToRender[date];
+                    // Filter tasks that actually have calculations
+                    const tasksWithCalculations = Object.keys(dayTasks || {}).filter(taskName => 
+                        dayTasks[taskName] && dayTasks[taskName].length > 0
+                    );
+
+                    if (tasksWithCalculations.length > 0) {
+                        hasRenderableHistory = true; // Mark that we found history to display
+                        const dayEntryDiv = document.createElement('div');
+                        dayEntryDiv.classList.add('day-entry');
+
+                        const dayHeaderDiv = document.createElement('div');
+                        dayHeaderDiv.classList.add('day-header');
+                        dayHeaderDiv.innerHTML = `${date} <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>`;
+                        dayEntryDiv.appendChild(dayHeaderDiv);
+
+                        const dayContentDiv = document.createElement('div');
+                        dayContentDiv.classList.add('day-content');
+
+                        const sortedTaskNames = Object.keys(dayTasks).sort(); // Sort tasks alphabetically
+                        sortedTaskNames.forEach(taskName => {
+                            const taskCalculations = dayTasks[taskName];
+                            if (taskCalculations && taskCalculations.length > 0) {
+                                const taskEntryDiv = document.createElement('div');
+                                taskEntryDiv.classList.add('task-entry');
+
+                                const taskHeaderDiv = document.createElement('div');
+                                taskHeaderDiv.classList.add('task-header');
+                                taskHeaderDiv.innerHTML = `${taskName} <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>`;
+                                taskEntryDiv.appendChild(taskHeaderDiv);
+
+                                const taskContentDiv = document.createElement('div');
+                                taskContentDiv.classList.add('task-content');
+                                taskCalculations.forEach(item => {
+                                    const p = document.createElement('p');
+                                    p.classList.add('history-item');
+                                    const itemDate = new Date(item.timestamp);
+                                    const time = itemDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                    p.textContent = `${time}: ${item.expression} = ${item.result}`;
+                                    taskContentDiv.appendChild(p);
+                                });
+                                taskEntryDiv.appendChild(taskContentDiv);
+                                dayContentDiv.appendChild(taskEntryDiv);
+
+                                // Toggle expand/collapse for tasks
+                                taskHeaderDiv.addEventListener('click', (event) => {
+                                    event.stopPropagation(); // Prevent day-entry from toggling
+                                    taskEntryDiv.classList.toggle('expanded');
+                                    const icon = taskHeaderDiv.querySelector('.toggle-icon i');
+                                    if (taskEntryDiv.classList.contains('expanded')) {
+                                        icon.classList.remove('fa-chevron-down');
+                                        icon.classList.add('fa-chevron-up');
+                                    } else {
+                                        icon.classList.remove('fa-chevron-up');
+                                        icon.classList.add('fa-chevron-down');
+                                    }
+                                });
+                            }
+                        });
+                        dayEntryDiv.appendChild(dayContentDiv);
+
+                        // Toggle expand/collapse for days
+                        dayHeaderDiv.addEventListener('click', () => {
+                            dayEntryDiv.classList.toggle('expanded');
+                            const icon = dayHeaderDiv.querySelector('.toggle-icon i');
+                            if (dayEntryDiv.classList.contains('expanded')) {
+                                icon.classList.remove('fa-chevron-down');
+                                icon.classList.add('fa-chevron-up');
+                            } else {
+                                icon.classList.remove('fa-chevron-up');
+                                icon.classList.add('fa-chevron-down');
+                            }
+                        });
+
+                        // Insert the day entry before the clear history button
+                        historyContentDiv.insertBefore(dayEntryDiv, clearAllHistoryButton);
+                    }
+                });
+
+                // Finally, update noHistoryMessage visibility based on whether any history was rendered
+                if (hasRenderableHistory) {
+                    noHistoryMessage.style.display = 'none';
+                } else {
+                    noHistoryMessage.style.display = 'block';
+                }
+            }
+
+
+            // --- History Search ---
+            searchHistoryButton.addEventListener('click', () => {
+                searchControls.style.display = searchControls.style.display === 'none' ? 'flex' : 'none';
+                if (searchControls.style.display === 'flex') {
+                    searchInput.focus();
+                } else {
+                    searchInput.value = '';
+                    renderDayWiseHistory(); // Show full history when closing search
+                }
+            });
+
+            executeSearchButton.addEventListener('click', () => {
+                searchHistory();
+            });
+
+            searchInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    searchHistory();
+                }
+            });
+
+            function searchHistory() {
+                const query = searchInput.value.trim().toLowerCase();
+                if (!query) {
+                    renderDayWiseHistory(); // Show full history if query is empty
+                    return;
+                }
+
+                const searchResults = {};
+                for (const date in calculationHistory) {
+                    // Check if date matches query (partial match allowed)
+                    if (date.includes(query)) {
+                        searchResults[date] = calculationHistory[date];
+                        continue; // No need to check tasks if date itself matches
+                    }
+
+                    // Check tasks for the current date
+                    for (const taskName in calculationHistory[date]) {
+                        if (taskName.toLowerCase().includes(query)) {
+                            if (!searchResults[date]) {
+                                searchResults[date] = {};
+                            }
+                            // Only add the matching task, not all tasks for that date
+                            searchResults[date][taskName] = calculationHistory[date][taskName];
+                        }
+                    }
+                }
+                renderDayWiseHistory(searchResults);
+                speak(`Search complete for ${query}.`);
+            }
+
+
+            // --- Theme Toggling ---
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+                if (savedTheme === 'dark') {
+                    themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+                } else {
+                    themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+                }
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+
+            themeToggle.addEventListener('click', () => {
+                let currentTheme = document.documentElement.getAttribute('data-theme');
+                if (currentTheme === 'dark') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                    localStorage.setItem('theme', 'light');
+                    themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+                } else {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                    localStorage.setItem('theme', 'dark');
+                    themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+                }
+            });
+
+            // --- Speech Synthesis (Text-to-Speech) ---
+            function speak(text) {
+                if (isMuted) return;
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = selectedLanguage; // Use selected language for output
+                synth.speak(utterance);
+            }
+
+            muteVoiceOutput.addEventListener('click', () => {
+                isMuted = !isMuted;
+                muteVoiceOutput.classList.toggle('active', isMuted);
+                muteVoiceOutput.innerHTML = isMuted ? '<i class="fas fa-volume-off"></i> Unmute' : '<i class="fas fa-volume-up"></i> Mute';
+                if (isMuted) {
+                    synth.cancel(); // Stop any ongoing speech
+                }
+            });
+
+            // --- Speech Recognition (Voice-to-Text) ---
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = selectedLanguage;
+
+                languageSelect.addEventListener('change', (event) => {
+                    selectedLanguage = event.target.value;
+                    recognition.lang = selectedLanguage;
+                    speak(`Language set to ${selectedLanguage === 'en-IN' ? 'English' : 'Hindi'}`);
+                });
+
+                recognition.onstart = () => {
+                    voiceInputToggle.classList.add('active');
+                    voiceInputToggle.innerHTML = '<i class="fas fa-microphone-alt-slash"></i> Listening...';
+                    console.log('Voice recognition started...');
+                };
+
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    console.log('Voice input:', transcript);
+                    processVoiceInput(transcript);
+                };
+
+                recognition.onerror = (event) => {
+                    console.error('Speech recognition error:', event.error);
+                    let errorMessage = 'Voice input error.';
+                    if (event.error === 'not-allowed') {
+                        errorMessage = 'Microphone access denied. Please enable it in browser settings (requires HTTPS).';
+                        speak(errorMessage);
+                    } else if (event.error === 'no-speech') {
+                        errorMessage = 'No speech detected. Please speak clearly.';
+                        speak(errorMessage);
+                    } else if (event.error === 'audio-capture') {
+                        errorMessage = 'No microphone found or in use.';
+                        speak(errorMessage);
+                    } else if (event.error === 'network') {
+                        errorMessage = 'Network error. Check your internet connection.';
+                        speak(errorMessage);
+                    } else if (event.error === 'language-not-supported') {
+                        errorMessage = 'Selected language not supported for voice recognition.';
+                        speak(errorMessage);
+                    } else {
+                        speak('Sorry, an unknown voice error occurred.');
+                    }
+                    expressionDisplay.textContent = errorMessage;
+
+                    voiceInputToggle.classList.remove('active');
+                    voiceInputToggle.innerHTML = '<i class="fas fa-microphone"></i> Speak';
+                    isVoiceInputActive = false;
+                };
+
+                recognition.onend = () => {
+                    isVoiceInputActive = false;
+                    voiceInputToggle.classList.remove('active');
+                    voiceInputToggle.innerHTML = '<i class="fas fa-microphone"></i> Speak';
+                    console.log('Voice recognition ended.');
+                };
+
+                voiceInputToggle.addEventListener('click', () => {
+                    if (!isVoiceInputActive) {
+                        try {
+                            recognition.start();
+                            isVoiceInputActive = true;
+                        } catch (e) {
+                            console.error("Error starting speech recognition:", e);
+                            expressionDisplay.textContent = "Voice Start Error";
+                            speak("Could not start voice input. Check console for details.");
+                            voiceInputToggle.classList.remove('active');
+                            voiceInputToggle.innerHTML = '<i class="fas fa-microphone"></i> Speak';
+                            isVoiceInputActive = false;
+                        }
+                    } else {
+                        recognition.stop();
+                        isVoiceInputActive = false;
+                    }
+                });
+            } else {
+                voiceInputToggle.disabled = true;
+                voiceInputToggle.textContent = 'Voice Not Supported';
+                voiceInputToggle.style.opacity = '0.5';
+                console.warn('Web Speech API (webkitSpeechRecognition or SpeechRecognition) not supported in this browser.');
+            }
+
+            // --- Voice Input Processing with extensive mispronunciation and large number handling ---
+            function processVoiceInput(transcript) {
+                let processedInput = transcript.toLowerCase().trim();
+
+                const replacementMap = {
+                    'plus': '+', 'add': '+', 'p l u s': '+',
+                    'minus': '-', 'subtract': '-', 'take away': '-',
+                    'times': '*', 'multiply by': '*', 'multiplied by': '*', 'into': '*', 'x': '*', 'cross': '*',
+                    'divided by': '/', 'divide by': '/', 'over': '/',
+                    'point': '.', 'dot': '.',
+                    'equals': '=', 'equal to': '=', 'is': '=', 'answer': '=', 'calculate': '=', 'what is': '=',
+                    'clear': 'AC', 'all clear': 'AC', 'reset': 'AC',
+                    'delete': 'DEL', 'backspace': 'DEL', 'del': 'DEL', 'cancel': 'DEL', 'remove': 'DEL',
+                    'percent': '%', 'percentage': '%', 'per cent': '%',
+
+                    'zero': '0', 'oh': '0',
+                    'one': '1', 'two': '2', 'too': '2', 'to': '2', 'three': '3', 'four': '4', 'for': '4',
+                    'five': '5', 'six': '6', 'seven': '7', 'eight': '8', 'ate': '8', 'nine': '9',
+                    'ten': '10', 'eleven': '11', 'twelve': '12', 'thirteen': '13', 'fourteen': '14',
+                    'fifteen': '15', 'sixteen': '16', 'seventeen': '17', 'eighteen': '18', 'nineteen': '19',
+                    'twenty': '20', 'thirty': '30', 'forty': '40', 'fifty': '50', 'sixty': '60',
+                    'seventy': '70', 'eighty': '80', 'ninety': '90',
+
+                    'hundred': '*100', 'hundreds': '*100',
+                    'thousand': '*1000', 'thousands': '*1000', 'hazaar': '*1000', 'hazar': '*1000',
+                    'lakh': '*100000', 'lakhs': '*100000',
+                    'crore': '*10000000', 'crores': '*10000000',
+                    'arab': '*1000000000', 'arabs': '*1000000000',
+                    'kharab': '*100000000000', 'kharabs': '*100000000000',
+                    'million': '*1000000', 'millions': '*1000000',
+                    'billion': '*1000000000', 'billions': '*1000000000',
+                    'trillion': '*1000000000000', 'trillions': '*1000000000000',
+                    'quadrillion': '*1000000000000000',
+
+                    'sine': 'sin(', 'sign': 'sin(', 'sin': 'sin(',
+                    'cos': 'cos(', 'cosine': 'cos(',
+                    'tan': 'tan(', 'tangent': 'tan(',
+                    'log': 'log(', 'logarithm': 'log(',
+                    'natural log': 'ln(', 'ln': 'ln(', 'ellen': 'ln(',
+                    'square root': 'sqrt(', 's q r t': 'sqrt(', 'root': 'sqrt(', 'square rut': 'sqrt(',
+                    'power': '^', 'to the power of': '^', 'raised to': '^', 'exponent': '^',
+                    'pie': 'pi', 'pi': 'pi',
+                    'open parenthesis': '(', 'open bracket': '(', 'left parenthesis': '(', 'open': '(',
+                    'close parenthesis': ')', 'close bracket': ')', 'right parenthesis': ')', 'close': ')',
+                    'factorial': '!',
+                    'modulus': '%',
+
+                    'जमा': '+', 'जोड़': '+', 'घटा': '-', 'माइनस': '-',
+                    'गुणा': '*', 'मल्टीप्लाई': '*', 'भाग': '/', 'डिवाइड': '/',
+                    'दशमलव': '.', 'शून्य': '0', 'एक': '1', 'दो': '2', 'तीन': '3',
+                    'चार': '4', 'पांच': '5', 'छह': '6', 'सात': '7', 'आठ': '8', 'नौ': '9',
+                    'बराबर': '=',
+                    'साइन': 'sin(', 'कॉस': 'cos(', 'टैन': 'tan(',
+                    'सो': 'so',
+                    'हल करो': '=', 'उत्तर': '='
+                };
+
+                const sortedKeys = Object.keys(replacementMap).sort((a, b) => b.length - a.length);
+
+                for (const key of sortedKeys) {
+                    let regexPattern = key;
+                    if (!['+', '-', '*', '/', '.', '=', '(', ')', '%', '^', 'pi', '!'].includes(key) && !key.startsWith('*')) {
+                        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        regexPattern = `\\b${escapedKey}\\b`;
+                    }
+                    processedInput = processedInput.replace(new RegExp(regexPattern, 'gi'), replacementMap[key]);
+                }
+                
+                processedInput = processedInput.replace(/(\d+)\s*\*(\d+)/g, '$1*$2');
+                processedInput = processedInput.replace(/\s+/g, ' ').trim();
+                processedInput = processedInput.replace(/([+\-*/%^])/g, ' $1 ').replace(/\s+/g, ' ').trim();
+                processedInput = processedInput.replace(/\s+\(/g, '(').replace(/\)\s+/g, ')');
+
+                const operators = ['+', '-', '*', '/', '%', '^'];
+                const firstCharAfterTrim = processedInput.charAt(0);
+                const isLeadingOperator = operators.includes(firstCharAfterTrim);
+
+                const previousResultIsNumeric = !isNaN(parseFloat(expressionDisplay.textContent)) && isFinite(expressionDisplay.textContent);
+
+                if (isLeadingOperator && previousResultIsNumeric && currentExpression !== '0' && currentExpression !== 'Error') {
+                    currentExpression = expressionDisplay.textContent + processedInput;
+                } else {
+                    currentExpression = processedInput;
+                }
+
+                expressionDisplay.textContent = currentExpression;
+                if (historyIndex === -1 || !historyDisplayMain.textContent.startsWith('History:')) {
+                    speak(`Recognized: ${currentExpression}`);
+                }
+                
+                // Attempt real-time evaluation for voice input
+                attemptRealTimeEvaluation(true); 
+            }
+
+            // --- Centralized Calculation Logic (extracted for reuse) ---
+            function evaluateExpression(expressionToEvaluate) {
+                let result;
+
+                // Handle percentage calculation
+                if (expressionToEvaluate.includes('%')) {
+                    const percentMatch = expressionToEvaluate.match(/(\d+(\.\d+)?)\s*([\+\-\*\/])?\s*(\d+(\.\d+)?)?%/);
+                    if (percentMatch) {
+                        const numBeforeOperator = percentMatch[1];
+                        const operator = percentMatch[3];
+                        const percentageValue = percentMatch[4];
+
+                        if (operator && numBeforeOperator && percentageValue) {
+                            const base = math.evaluate(numBeforeOperator);
+                            expressionToEvaluate = `${numBeforeOperator} ${operator} (${base} * (${percentageValue} / 100))`;
+                        } else if (percentageValue) {
+                            expressionToEvaluate = `(${percentageValue} / 100)`;
+                        } else if (numBeforeOperator && !operator && !percentageValue && expressionToEvaluate.endsWith('%')) {
+                            expressionToEvaluate = `(${numBeforeOperator} / 100)`;
+                        }
+                    } else {
+                        // Catch cases like "50%" or "100 + 20%" where regex might miss it
+                        expressionToEvaluate = expressionToEvaluate.replace(/(\d+(\.\d+)?)%/g, '($1 / 100)');
+                    }
+                }
+                
+                try {
+                    result = math.evaluate(expressionToEvaluate);
+                } catch (e) {
+                    throw new Error("Invalid Expression"); // Re-throw to be caught by caller
+                }
+                
+
+                historyDisplayMain.textContent = expressionToEvaluate + ' =';
+                expressionDisplay.textContent = result;
+                speak(`The result is ${result}`);
+
+                // Store calculation under the active task for today
+                // Ensure date and task objects exist before pushing
+                if (!calculationHistory[TODAY_DATE]) {
+                    calculationHistory[TODAY_DATE] = {};
+                }
+                if (!calculationHistory[TODAY_DATE][activeTask]) {
+                    calculationHistory[TODAY_DATE][activeTask] = [];
+                }
+                calculationHistory[TODAY_DATE][activeTask].push({ expression: expressionToEvaluate, result: result, timestamp: new Date().toISOString() });
+                
+                saveHistory(); // Save history after each calculation
+                currentExpression = result.toString();
+                historyIndex = -1; // Reset history index when a new calculation is performed
+                updateCurrentDayHistoryForDisplay(); // Update the local array for today's history button
+            }
+
+            // --- Real-time Evaluation Function ---
+            function attemptRealTimeEvaluation(isFromVoice = false) {
+                let expressionToEvaluate = currentExpression;
+                const operators = ['+', '-', '*', '/', '%', '^'];
+                const lastChar = expressionToEvaluate.slice(-1);
+
+                // Don't evaluate if the expression is empty, or ends with an operator/function that needs more input
+                if (!expressionToEvaluate || 
+                    operators.includes(lastChar) || 
+                    lastChar === '(' || 
+                    expressionToEvaluate.endsWith('sin(') || 
+                    expressionToEvaluate.endsWith('cos(') ||
+                    expressionToEvaluate.endsWith('tan(') ||
+                    expressionToEvaluate.endsWith('log(') ||
+                    expressionToEvaluate.endsWith('log10(') ||
+                    expressionToEvaluate.endsWith('sqrt(')
+                    ) {
+                    historyDisplayMain.textContent = ''; // Clear history display if not evaluable
+                    return;
+                }
+
+                try {
+                    // Temporarily replace 'x' with '*' for math.js compatibility if needed (buttons use 'x')
+                    let tempExpression = expressionToEvaluate.replace(/x/g, '*');
+
+                    // Handle percentage: if it's just a number followed by '%', convert to decimal
+                    if (/^\d+(\.\d+)?%$/.test(tempExpression)) {
+                        const num = parseFloat(tempExpression.slice(0, -1));
+                        expressionDisplay.textContent = num / 100;
+                        historyDisplayMain.textContent = `${expressionToEvaluate} = ${num / 100}`;
+                        return; // Done for this type of percentage
+                    }
+
+                    // Handle expressions ending with a number where an operator is implied (e.g., "5sin(90)")
+                    tempExpression = tempExpression.replace(/(\d)([a-zA-Z])/g, '$1*$2');
+
+                    // If it's a single number or a valid operation without trailing operators
+                    let result = math.evaluate(tempExpression);
+                    
+                    // Check if the result is valid and not a function definition (e.g., from 'sin(')
+                    if (typeof result === 'number' || typeof result === 'boolean' || result instanceof math.type.Complex) {
+                        historyDisplayMain.textContent = `${expressionToEvaluate} =`;
+                        expressionDisplay.textContent = result;
+                    } else {
+                        historyDisplayMain.textContent = ''; // Clear history display if the result is not a simple number
+                    }
+                } catch (e) {
+                    // Don't show "Error" in real-time unless it's a severe syntax issue
+                    // Keep the current expression in display, and clear history for this attempt
+                    historyDisplayMain.textContent = ''; 
+                    console.warn("Real-time evaluation failed (expected for incomplete expressions):", e.message);
+                }
+            }
+
+
+            // --- History Navigation (for today's active task history in main display) ---
+            historyButton.addEventListener('click', () => {
+                if (currentDayHistory.length === 0) {
+                    speak('No history available for the current task today.');
+                    historyDisplayMain.textContent = `No History for "${activeTask}" today`;
+                    return;
+                }
+
+                historyIndex = (historyIndex + 1) % currentDayHistory.length;
+                const historyEntry = currentDayHistory[historyIndex];
+
+                historyDisplayMain.textContent = `Task: ${activeTask} | ${historyEntry.expression} =`;
+                expressionDisplay.textContent = historyEntry.result;
+                // Do NOT speak the history entry when cycling through them
+                currentExpression = historyEntry.result.toString();
+            });
+
+            // --- New Task Button ---
+            newTaskButton.addEventListener('click', () => {
+                const taskName = prompt("Enter a name for the new task history (e.g., 'Budget Planning', 'Project Alpha'):");
+                if (taskName && taskName.trim() !== '') {
+                    setActiveTask(taskName.trim());
+                } else if (taskName !== null) { // If user clicked cancel, taskName is null
+                    speak("Task name cannot be empty. Reverting to General Calculations.");
+                    setActiveTask('General Calculations'); // Revert to general calculations
+                }
+            });
+
+            // --- Clear All History Button ---
+            clearAllHistoryButton.addEventListener('click', clearAllHistory);
+
+
+            // --- Calculator Logic (Manual Button Clicks) ---
+            buttons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const value = button.dataset.value;
+                    const operators = ['+', '-', '*', '/', '%', '^'];
+                    const functions = ['sin(', 'cos(', 'tan(', 'log(', 'log10(', 'sqrt('];
+
+                    if (value === 'AC') {
+                        currentExpression = '';
+                        historyDisplayMain.textContent = `Active Task: ${activeTask}`; // Show active task
+                        expressionDisplay.textContent = '0';
+                        speak('All Clear');
+                        historyIndex = -1; // Reset history index
+                        return;
+                    }
+
+                    if (value === 'DEL') {
+                        currentExpression = currentExpression.slice(0, -1);
+                        expressionDisplay.textContent = currentExpression || '0';
+                        // Attempt real-time evaluation after deletion
+                        attemptRealTimeEvaluation();
+                        return;
+                    }
+
+                    if (value === '=') {
+                        try {
+                            evaluateExpression(currentExpression);
+                        } catch (e) {
+                            expressionDisplay.textContent = 'Error';
+                            speak('Error in calculation. Please check your input.');
+                            currentExpression = '';
+                            console.error("Calculation Error:", e);
+                        }
+                        return;
+                    }
+
+                    // Handle initial '0' display
+                    if (expressionDisplay.textContent === '0' && value !== '.' && !isNaN(value) && !functions.includes(value)) {
+                        currentExpression = value;
+                    } else if (expressionDisplay.textContent === 'Error') {
+                         currentExpression = value;
+                    }
+                    else {
+                        // Prevent multiple operators or function calls immediately after each other
+                        const lastChar = currentExpression.slice(-1);
+                        const isLastCharOperator = operators.includes(lastChar);
+                        const isValueOperator = operators.includes(value);
+
+                        if (isLastCharOperator && isValueOperator) {
+                            // Replace last operator with new one
+                            currentExpression = currentExpression.slice(0, -1) + value;
+                        } else {
+                            currentExpression += value;
+                        }
+                    }
+
+                    expressionDisplay.textContent = currentExpression;
+                    attemptRealTimeEvaluation(); // Attempt real-time evaluation after each button press
+                });
+            });
+
+            // Optional: Keyboard support
+            document.addEventListener('keydown', (event) => {
+                const key = event.key;
+                const validKeys = [
+                    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                    '+', '-', '*', '/', '.',
+                    '(', ')', '%', '^',
+                    'Enter', 'Backspace', 'Escape'
+                ];
+
+                if (validKeys.includes(key)) {
+                    event.preventDefault(); // Prevent default browser actions for some keys
+
+                    if (key === 'Enter') {
+                        document.querySelector('.equals').click();
+                    } else if (key === 'Backspace') {
+                        document.querySelector('[data-value="DEL"]').click();
+                    } else if (key === 'Escape') {
+                        document.querySelector('[data-value="AC"]').click();
+                    } else {
+                        let targetButton;
+                        if (key === '*') targetButton = document.querySelector('[data-value="*"]');
+                        else if (key === '/') targetButton = document.querySelector('[data-value="/"]');
+                        else if (key === '+') targetButton = document.querySelector('[data-value="+"]');
+                        else if (key === '-') targetButton = document.querySelector('[data-value="-"]');
+                        else if (key === '.') targetButton = document.querySelector('[data-value="."]');
+                        else if (key === '(') targetButton = document.querySelector('[data-value="("]');
+                        else if (key === ')') targetButton = document.querySelector('[data-value=")"]');
+                        else if (key === '%') targetButton = document.querySelector('[data-value="%"]');
+                        else if (key === '^') targetButton = document.querySelector('[data-value="^"]');
+                        else targetButton = document.querySelector(`[data-value="${key}"]`);
+
+                        targetButton?.click();
+                    }
+                }
+            });
+
+            // Initial load and setup when the page finishes loading
+            loadHistory(); 
+
+            // Initial speak for welcome
+            if (synth && !isMuted) {
+                speak('Welcome to your smart scientific calculator.');
+            }
+        });
+        /* --- JAVASCRIPT END --- */
+    </script>
+</body>
+</html>
