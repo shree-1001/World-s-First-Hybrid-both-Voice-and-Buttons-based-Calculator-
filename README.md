@@ -66,9 +66,11 @@ Built using **HTML, CSS, JavaScript + Math.js + Web Speech API**, this project t
 ## ⚙️ How to Run  
 
 1. Clone the repository:
-git clone https://github.com/your-username/hybrid-calculator.git
-2. Open/Download the .html file of respiratory 
-3. Start using 🎯
+git clone https://github.com/shree-1001/World-s-First-Hybrid-both-Voice-and-Buttons-based-Calculator-.git.
+
+   OR
+1. Open/Download the .html file from zip file of respiratory 
+2. Start using 🎯
    
 ### 🎯 Controls
 - Calculate — Buttons / Keyboard
